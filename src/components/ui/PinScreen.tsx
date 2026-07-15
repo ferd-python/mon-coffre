@@ -11,7 +11,7 @@ export interface PinScreenProps {
   title: string;
   subtitle?: string;
   error?: string;
-  onSubmit: (pin: string) => void;
+  onSubmit: (pin: string) => void | Promise<void>;
   onCancel?: () => void;
   biometricAvailable?: boolean;
   onBiometric?: () => void;
@@ -27,12 +27,17 @@ export function PinScreen({
   onBiometric,
 }: PinScreenProps) {
   const [digits, setDigits] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (digits.length === PIN_LENGTH) {
+    if (digits.length === PIN_LENGTH && !isSubmitting) {
       const pin = digits;
       setDigits("");
-      onSubmit(pin);
+      const result = onSubmit(pin);
+      if (result instanceof Promise) {
+        setIsSubmitting(true);
+        result.finally(() => setIsSubmitting(false));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [digits]);
@@ -85,6 +90,7 @@ export function PinScreen({
       <PinKeypad
         onPress={(digit) => setDigits((prev) => (prev.length < PIN_LENGTH ? prev + digit : prev))}
         onBackspace={() => setDigits((prev) => prev.slice(0, -1))}
+        disabled={isSubmitting}
       />
 
       {biometricAvailable && onBiometric ? (

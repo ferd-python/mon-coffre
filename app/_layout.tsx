@@ -6,12 +6,24 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary, Loading, Screen, Text } from "@/components/ui";
 import { SecurityGate } from "@/components/forms";
-import { useDatabaseMigrations, useSeedDefaultCategories } from "@/hooks";
+import {
+  useDatabaseMigrations,
+  useSeedDefaultCategories,
+  useSeedSettings,
+  useSyncErrorWatcher,
+} from "@/hooks";
 import { ToastProvider } from "@/lib/toast";
+
+function SyncErrorWatcher() {
+  useSyncErrorWatcher();
+  return null;
+}
 
 export default function RootLayout() {
   const { success, error } = useDatabaseMigrations();
-  const isSeeded = useSeedDefaultCategories(success);
+  const isCategoriesSeeded = useSeedDefaultCategories(success);
+  const isSettingsSeeded = useSeedSettings(success);
+  const isSeeded = isCategoriesSeeded && isSettingsSeeded;
 
   if (error) {
     return (
@@ -39,6 +51,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ToastProvider>
           <StatusBar style="auto" />
+          <SyncErrorWatcher />
           <SecurityGate>
             <Stack screenOptions={{ headerShown: false, animation: "fade" }} />
           </SecurityGate>

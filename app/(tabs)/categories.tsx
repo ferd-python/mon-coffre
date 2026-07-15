@@ -18,6 +18,7 @@ import { useCategoriesWithStats, type CategoryWithStats } from "@/hooks/useCateg
 import { categoryService } from "@/services";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/utils/cn";
+import { isProtectedCategoryName } from "@/constants/categories";
 import type { IconName } from "@/components/ui";
 
 type SortKey = "ordre" | "nom" | "solde";
@@ -81,11 +82,13 @@ export default function CategoriesScreen() {
   }, []);
 
   const openEditForm = useCallback((category: CategoryWithStats) => {
+    if (isProtectedCategoryName(category.nom)) return;
     setEditingCategory(category);
     setIsFormVisible(true);
   }, []);
 
   const handleDeleteRequest = useCallback((category: CategoryWithStats) => {
+    if (isProtectedCategoryName(category.nom)) return;
     if (category.nombreTransactions > 0) {
       setBlockedCategory(category);
     } else {

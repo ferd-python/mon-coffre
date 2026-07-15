@@ -1,7 +1,7 @@
 import type { IconName } from "@/components/ui";
 import type { TimelineItemData } from "@/components/cards";
 import type { Category, ChurchContribution, Transaction } from "@/types";
-import { CHURCH_CATEGORY_NAME } from "@/constants/categories";
+import { CHURCH_CATEGORY_NAME, PERSONAL_CATEGORY_NAME } from "@/constants/categories";
 import { formatFCFA } from "./formatFCFA";
 
 export interface CategoryWithStats extends Category {
@@ -17,10 +17,20 @@ export interface TransactionWithCategory extends Transaction {
 
 const FALLBACK_ICON: IconName = "help-circle-outline";
 
+/**
+ * Currency amounts accumulate via repeated float addition/subtraction, which can leave
+ * epsilon-level noise (e.g. -1e-10 instead of exactly 0). Rounding to the cent avoids that
+ * noise being read as a genuinely negative "Personnel" balance.
+ */
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 export function computeCategoriesWithStats(
   categories: Category[],
   transactions: Transaction[],
   churchContributions: ChurchContribution[] = [],
+  soldeBancaire = 0,
 ): CategoryWithStats[] {
   const churchTotal = churchContributions.reduce(
     (total, contribution) => total + contribution.seme + contribution.funerailles,
@@ -28,10 +38,22 @@ export function computeCategoriesWithStats(
   );
   const churchCount = churchContributions.length;
 
-  return categories.map((category) => {
-    const categoryTransactions = transactions.filter(
-      (transaction) => transaction.categorieId === category.id,
-    );
+  const transactionsByCategory = new Map<number, Transaction[]>();
+  for (const transaction of transactions) {
+    const bucket = transactionsByCategory.get(transaction.categorieId);
+    if (bucket) {
+      bucket.push(transaction);
+    } else {
+      transactionsByCategory.set(transaction.categorieId, [transaction]);
+    }
+  }
+
+  const results = categories.map((category) => {
+    if (category.nom === PERSONAL_CATEGORY_NAME) {
+      return { ...category, solde: 0, nombreTransactions: 0 };
+    }
+
+    const categoryTransactions = transactionsByCategory.get(category.id) ?? [];
     let solde = categoryTransactions.reduce(
       (total, transaction) =>
         total + (transaction.type === "ENTREE" ? transaction.montant : -transaction.montant),
@@ -46,10 +68,21 @@ export function computeCategoriesWithStats(
 
     return {
       ...category,
-      solde,
+      solde: roundCurrency(solde),
       nombreTransactions,
     };
   });
+
+  const sumOtherCategories = results.reduce(
+    (total, category) => (category.nom === PERSONAL_CATEGORY_NAME ? total : total + category.solde),
+    0,
+  );
+
+  return results.map((category) =>
+    category.nom === PERSONAL_CATEGORY_NAME
+      ? { ...category, solde: roundCurrency(soldeBancaire - sumOtherCategories) }
+      : category,
+  );
 }
 
 export function computeTransactionsWithCategory(
@@ -68,7 +101,7 @@ export function computeTransactionsWithCategory(
 }
 
 export interface DashboardSummary {
-  soldeGlobal: number;
+  soldeBancaire: number;
   totalEglise: number;
   nombreCategories: number;
   nombreTransactions: number;
@@ -78,14 +111,14 @@ export function computeDashboardSummary(
   categories: CategoryWithStats[],
   transactionsCount: number,
   churchContributions: ChurchContribution[],
+  soldeBancaire: number,
 ): DashboardSummary {
-  const soldeGlobal = categories.reduce((total, category) => total + category.solde, 0);
   const totalEglise = churchContributions.reduce(
     (total, contribution) => total + contribution.seme + contribution.funerailles,
     0,
   );
   return {
-    soldeGlobal,
+    soldeBancaire,
     totalEglise,
     nombreCategories: categories.length,
     nombreTransactions: transactionsCount,

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { View } from "react-native";
+import { AppState, View } from "react-native";
 import { AppButton, Icon, Loading, PinScreen, Screen, Text } from "@/components/ui";
 import { PinSetupFlow } from "./PinSetupFlow";
 import { useSecurity } from "@/hooks/useSecurity";
@@ -37,7 +37,17 @@ export function SecurityGate({ children }: SecurityGateProps) {
       handleBiometric();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [security.isLoading]);
+  }, [security.isLoading, isUnlocked]);
+
+  useEffect(() => {
+    if (!security.pinEnabled) return;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        setIsUnlocked(false);
+      }
+    });
+    return () => subscription.remove();
+  }, [security.pinEnabled]);
 
   const handleSkipOnboarding = async () => {
     try {

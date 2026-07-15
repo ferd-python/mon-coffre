@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { AppCard, Text, Icon, type IconName } from "@/components/ui";
 import { formatFCFA } from "@/utils/formatFCFA";
 import { cn } from "@/utils/cn";
@@ -11,6 +11,7 @@ export interface AppMoneyCardProps {
   label: string;
   amount: number;
   variant?: AppMoneyCardVariant;
+  onEdit?: () => void;
 }
 
 const VARIANT_BG: Record<AppMoneyCardVariant, string> = {
@@ -20,7 +21,7 @@ const VARIANT_BG: Record<AppMoneyCardVariant, string> = {
   neutral: "bg-neutral-800",
 };
 
-function AppMoneyCardComponent({ icon, label, amount, variant = "primary" }: AppMoneyCardProps) {
+function AppMoneyCardComponent({ icon, label, amount, variant = "primary", onEdit }: AppMoneyCardProps) {
   return (
     <AppCard
       className={cn("gap-4 border-0", VARIANT_BG[variant])}
@@ -35,9 +36,25 @@ function AppMoneyCardComponent({ icon, label, amount, variant = "primary" }: App
           <Icon name={icon} size={16} color="#ffffff" />
         </View>
       </View>
-      <Text variant="title" className="text-2xl text-white">
-        {formatFCFA(amount)}
-      </Text>
+      <View className="flex-row items-end justify-between">
+        <Text variant="title" className="text-2xl text-white">
+          {formatFCFA(amount)}
+        </Text>
+        {onEdit ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Modifier ${label.toLowerCase()}`}
+            hitSlop={8}
+            onPress={onEdit}
+            className="flex-row items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 active:bg-white/25"
+          >
+            <Icon name="create-outline" size={14} color="#ffffff" />
+            <Text variant="caption" className="font-semibold text-white">
+              Modifier
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
     </AppCard>
   );
 }

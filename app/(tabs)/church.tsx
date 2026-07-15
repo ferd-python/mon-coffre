@@ -51,6 +51,7 @@ export default function ChurchScreen() {
     return periodFiltered.filter(
       (contribution) =>
         contribution.date.toLowerCase().includes(term) ||
+        formatDate(contribution.date).toLowerCase().includes(term) ||
         (contribution.commentaire ?? "").toLowerCase().includes(term),
     );
   }, [contributions, period, search]);

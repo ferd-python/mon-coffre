@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PinScreen } from "@/components/ui";
 
 export interface PinSetupFlowProps {
-  onComplete: (pin: string) => void;
+  onComplete: (pin: string) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -18,8 +18,7 @@ export function PinSetupFlow({ onComplete, onCancel }: PinSetupFlowProps) {
     }
 
     if (pin === firstPin) {
-      onComplete(pin);
-      return;
+      return onComplete(pin);
     }
 
     setError("Les codes ne correspondent pas. Réessayez.");

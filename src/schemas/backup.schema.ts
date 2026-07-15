@@ -45,6 +45,7 @@ export const backupSchema = z.object({
   cotisationsEglise: z.array(churchContributionBackupSchema),
   parametres: z.object({
     devise: z.string(),
+    soldeBancaire: z.number().default(0),
   }),
 });
 

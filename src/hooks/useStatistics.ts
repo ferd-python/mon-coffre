@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useCategoriesQuery } from "./useCategoriesQuery";
 import { useTransactionsQuery } from "./useTransactionsQuery";
 import { useChurchContributionsQuery } from "./useChurchContributionsQuery";
+import { useSettingsQuery } from "./useSettingsQuery";
 import {
   computeCategoriesWithStats,
   computeTransactionsWithCategory,
@@ -12,10 +13,11 @@ export function useStatistics() {
   const { data: categoriesData, updatedAt: categoriesUpdatedAt } = useCategoriesQuery();
   const { data: transactionsData, updatedAt: transactionsUpdatedAt } = useTransactionsQuery();
   const { data: churchData, updatedAt: churchUpdatedAt } = useChurchContributionsQuery();
+  const { soldeBancaire } = useSettingsQuery();
 
   const categories = useMemo(
-    () => computeCategoriesWithStats(categoriesData, transactionsData, churchData),
-    [categoriesData, transactionsData, churchData],
+    () => computeCategoriesWithStats(categoriesData, transactionsData, churchData, soldeBancaire),
+    [categoriesData, transactionsData, churchData, soldeBancaire],
   );
 
   const transactions = useMemo(
@@ -30,6 +32,7 @@ export function useStatistics() {
 
   return {
     ...stats,
+    soldeBancaire,
     isLoading: !categoriesUpdatedAt || !transactionsUpdatedAt || !churchUpdatedAt,
   };
 }

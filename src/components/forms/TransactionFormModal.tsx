@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import { useToast } from "@/lib/toast";
 import { useCategoriesQuery } from "@/hooks/useCategoriesQuery";
 import { getTodayDateString } from "@/utils/formatDate";
 import { cn } from "@/utils/cn";
+import { PERSONAL_CATEGORY_NAME } from "@/constants/categories";
 import type { Transaction, TransactionType } from "@/types";
 
 export interface TransactionFormModalProps {
@@ -25,7 +26,11 @@ const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
 
 export function TransactionFormModal({ visible, onClose, transaction }: TransactionFormModalProps) {
   const { showToast } = useToast();
-  const { data: categories } = useCategoriesQuery();
+  const { data: allCategories } = useCategoriesQuery();
+  const categories = useMemo(
+    () => allCategories.filter((category) => category.nom !== PERSONAL_CATEGORY_NAME),
+    [allCategories],
+  );
   const isEditing = Boolean(transaction);
 
   const {
@@ -46,8 +51,9 @@ export function TransactionFormModal({ visible, onClose, transaction }: Transact
 
   useEffect(() => {
     if (visible) {
+      const isCategorieValid = categories.some((category) => category.id === transaction?.categorieId);
       reset({
-        categorieId: transaction?.categorieId ?? categories[0]?.id ?? 0,
+        categorieId: isCategorieValid ? transaction!.categorieId : (categories[0]?.id ?? 0),
         type: transaction?.type ?? "SORTIE",
         montant: transaction ? String(transaction.montant) : "",
         description: transaction?.description ?? "",
@@ -90,6 +96,9 @@ export function TransactionFormModal({ visible, onClose, transaction }: Transact
         <View className="gap-4">
           <View className="gap-1.5">
             <Text variant="caption">Catégorie</Text>
+            <Text variant="caption">
+              Le montant de « {PERSONAL_CATEGORY_NAME} » est calculé automatiquement et n'apparaît pas ici.
+            </Text>
             <Controller
               control={control}
               name="categorieId"

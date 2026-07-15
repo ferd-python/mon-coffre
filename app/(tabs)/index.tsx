@@ -1,41 +1,55 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, View } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppButton, AppCard, AppHeader, Icon, Screen, Text, type IconName } from "@/components/ui";
 import { AppMoneyCard, AppStatisticCard } from "@/components/cards";
+import { SoldeBancaireFormModal } from "@/components/forms";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 import type { CategoryWithStats } from "@/hooks/useCategoriesWithStats";
+import { PERSONAL_CATEGORY_NAME } from "@/constants/categories";
 import { formatFCFA } from "@/utils/formatFCFA";
+import { cn } from "@/utils/cn";
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { soldeGlobal, totalEglise, nombreCategories, nombreTransactions, categories } =
+  const { soldeBancaire, totalEglise, nombreCategories, nombreTransactions, categories } =
     useDashboardSummary();
+  const [isEditingSolde, setIsEditingSolde] = useState(false);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: CategoryWithStats; index: number }) => (
-      <Animated.View entering={FadeInDown.delay(220 + Math.min(index, 10) * 40).springify()}>
-        <AppCard className="flex-row items-center gap-3">
-          <View
-            className="h-11 w-11 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: `${item.couleur ?? "#6b7280"}1A` }}
-          >
-            <Icon
-              name={(item.icone as IconName | null) ?? "pricetag-outline"}
-              size={20}
-              color={item.couleur ?? "#6b7280"}
-            />
-          </View>
-          <Text variant="body" className="flex-1 font-semibold">
-            {item.nom}
-          </Text>
-          <Text variant="body" className="font-semibold">
-            {formatFCFA(item.solde)}
-          </Text>
-        </AppCard>
-      </Animated.View>
-    ),
+    ({ item, index }: { item: CategoryWithStats; index: number }) => {
+      const isPersonalNegative = item.nom === PERSONAL_CATEGORY_NAME && item.solde < 0;
+      return (
+        <Animated.View entering={FadeInDown.delay(220 + Math.min(index, 10) * 40).springify()}>
+          <AppCard className="gap-2">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="h-11 w-11 items-center justify-center rounded-2xl"
+                style={{ backgroundColor: `${item.couleur ?? "#6b7280"}1A` }}
+              >
+                <Icon
+                  name={(item.icone as IconName | null) ?? "pricetag-outline"}
+                  size={20}
+                  color={item.couleur ?? "#6b7280"}
+                />
+              </View>
+              <Text variant="body" className="flex-1 font-semibold">
+                {item.nom}
+              </Text>
+              <Text variant="body" className={cn("font-semibold", isPersonalNegative && "text-danger")}>
+                {formatFCFA(item.solde)}
+              </Text>
+            </View>
+            {isPersonalNegative ? (
+              <Text variant="caption" className="text-danger">
+                Vous utilisez actuellement l'argent des autres.
+              </Text>
+            ) : null}
+          </AppCard>
+        </Animated.View>
+      );
+    },
     [],
   );
 
@@ -55,7 +69,13 @@ export default function DashboardScreen() {
         ListHeaderComponent={
           <View className="gap-4 pb-4">
             <Animated.View entering={FadeInDown.delay(0).springify()}>
-              <AppMoneyCard icon="wallet-outline" label="Solde global" amount={soldeGlobal} variant="primary" />
+              <AppMoneyCard
+                icon="wallet-outline"
+                label="Solde bancaire"
+                amount={soldeBancaire}
+                variant="primary"
+                onEdit={() => setIsEditingSolde(true)}
+              />
             </Animated.View>
 
             <View className="flex-row gap-3">
@@ -100,6 +120,12 @@ export default function DashboardScreen() {
             <Text variant="subtitle">Catégories</Text>
           </View>
         }
+      />
+
+      <SoldeBancaireFormModal
+        visible={isEditingSolde}
+        onClose={() => setIsEditingSolde(false)}
+        soldeBancaire={soldeBancaire}
       />
     </Screen>
   );

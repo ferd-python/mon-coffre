@@ -1,11 +1,17 @@
 import { Directory, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
-import { CategoryRepository, TransactionRepository, ChurchRepository } from "@/database/repositories";
+import {
+  CategoryRepository,
+  TransactionRepository,
+  ChurchRepository,
+  SettingsRepository,
+} from "@/database/repositories";
 import type { AppDatabase } from "@/database/client";
 import { backupSchema, type BackupData } from "@/schemas/backup.schema";
 import { CURRENCY_LABEL } from "@/constants/app";
 import { CategoryService } from "./category.service";
+import { SettingsService } from "./settings.service";
 import type { Category, ChurchContribution, Transaction } from "@/types";
 
 const BACKUP_VERSION = 1;
@@ -33,20 +39,25 @@ export class BackupService {
   private readonly categoryRepository: CategoryRepository;
   private readonly transactionRepository: TransactionRepository;
   private readonly churchRepository: ChurchRepository;
+  private readonly settingsRepository: SettingsRepository;
   private readonly categoryService: CategoryService;
+  private readonly settingsService: SettingsService;
 
   constructor(db: AppDatabase) {
     this.categoryRepository = new CategoryRepository(db);
     this.transactionRepository = new TransactionRepository(db);
     this.churchRepository = new ChurchRepository(db);
+    this.settingsRepository = new SettingsRepository(db);
     this.categoryService = new CategoryService(db);
+    this.settingsService = new SettingsService(db);
   }
 
   async buildBackup(): Promise<BackupData> {
-    const [categoriesData, transactionsData, churchData] = await Promise.all([
+    const [categoriesData, transactionsData, churchData, settings] = await Promise.all([
       this.categoryRepository.findAll(),
       this.transactionRepository.findAll(),
       this.churchRepository.findAll(),
+      this.settingsRepository.find(),
     ]);
 
     return {
@@ -55,7 +66,7 @@ export class BackupService {
       categories: categoriesData,
       transactions: transactionsData,
       cotisationsEglise: churchData,
-      parametres: { devise: CURRENCY_LABEL },
+      parametres: { devise: CURRENCY_LABEL, soldeBancaire: settings?.soldeBancaire ?? 0 },
     };
   }
 
@@ -140,10 +151,16 @@ export class BackupService {
       categories: await this.categoryRepository.findAll(),
       transactions: await this.transactionRepository.findAll(),
       church: await this.churchRepository.findAll(),
+      soldeBancaire: (await this.settingsRepository.find())?.soldeBancaire ?? 0,
     };
 
     try {
-      await this.replaceAllData(data.categories, data.transactions, data.cotisationsEglise);
+      await this.replaceAllData(
+        data.categories,
+        data.transactions,
+        data.cotisationsEglise,
+        data.parametres.soldeBancaire,
+      );
     } catch {
       await this.restoreSnapshot(snapshot);
       throw new BackupError("La restauration a échoué. Vos données existantes ont été conservées.");
@@ -155,12 +172,14 @@ export class BackupService {
     await this.churchRepository.deleteAll();
     await this.categoryRepository.deleteAll();
     await this.categoryService.seedDefaultCategories();
+    await this.settingsService.resetSoldeBancaire();
   }
 
   private async replaceAllData(
     categoriesData: Category[],
     transactionsData: Transaction[],
     churchData: ChurchContribution[],
+    soldeBancaire: number,
   ): Promise<void> {
     await this.transactionRepository.deleteAll();
     await this.churchRepository.deleteAll();
@@ -169,15 +188,22 @@ export class BackupService {
     await this.categoryRepository.insertMany(categoriesData);
     await this.transactionRepository.insertMany(transactionsData);
     await this.churchRepository.insertMany(churchData);
+    await this.settingsService.updateSoldeBancaire(soldeBancaire);
   }
 
   private async restoreSnapshot(snapshot: {
     categories: Category[];
     transactions: Transaction[];
     church: ChurchContribution[];
+    soldeBancaire: number;
   }): Promise<void> {
     try {
-      await this.replaceAllData(snapshot.categories, snapshot.transactions, snapshot.church);
+      await this.replaceAllData(
+        snapshot.categories,
+        snapshot.transactions,
+        snapshot.church,
+        snapshot.soldeBancaire,
+      );
     } catch {
       // The snapshot restore itself failed; nothing more can be safely attempted here.
     }

@@ -41,9 +41,11 @@ export function useSecurity() {
   );
 
   const disablePin = useCallback(async () => {
-    await security.clearStoredPin();
+    // Clear the "enabled" flag first: if a later step fails, the vault simply stays
+    // unlocked (safe) instead of being left locked with no PIN left to unlock it with.
     await security.setPinEnabledFlag(false);
     await security.setBiometricEnabledFlag(false);
+    await security.clearStoredPin();
     await refresh();
   }, [refresh]);
 

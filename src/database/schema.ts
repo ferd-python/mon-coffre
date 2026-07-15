@@ -33,6 +33,14 @@ export const transactions = sqliteTable("transactions", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+export const parametres = sqliteTable("parametres", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  soldeBancaire: real("solde_bancaire").notNull().default(0),
+  dateModification: text("date_modification")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+});
+
 export const cotisationsEglise = sqliteTable("cotisations_eglise", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   date: text("date").notNull(),
