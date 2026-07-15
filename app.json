@@ -2,6 +2,7 @@
   "expo": {
     "name": "Mon Coffre",
     "slug": "mon-coffre",
+    "owner": "tkf_expo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -63,6 +64,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "31f0d10a-a98c-4244-8218-2a420dfc06c3"
+      }
     }
   }
 }
