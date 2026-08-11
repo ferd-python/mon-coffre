@@ -6,7 +6,7 @@ import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ErrorBoundary, Loading, Screen, Text } from "@/components/ui";
+import { AppButton, ErrorBoundary, Loading, Screen, Text } from "@/components/ui";
 import { SecurityGate } from "@/components/forms";
 import {
   useDatabaseMigrations,
@@ -29,13 +29,15 @@ function RootLayoutContent() {
   const isSeeded = isCategoriesSeeded && isSettingsSeeded;
 
   if (error) {
+    const cause = (error as { cause?: unknown }).cause;
+    const causeMessage = cause instanceof Error ? cause.message : undefined;
     return (
       <Screen className="items-center justify-center px-6">
         <Text variant="subtitle" className="text-danger text-center">
           Erreur d'initialisation de la base de données
         </Text>
         <Text variant="caption" className="mt-2 text-center">
-          {error.message}
+          {causeMessage ?? error.message}
         </Text>
       </Screen>
     );
@@ -66,12 +68,34 @@ function RootLayoutContent() {
 
 export default function RootLayout() {
   const [isDatabaseReady, setIsDatabaseReady] = useState(Platform.OS !== "web");
+  const [databaseStartupError, setDatabaseStartupError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      databaseReady.then(() => setIsDatabaseReady(true));
+      databaseReady.then(
+        () => setIsDatabaseReady(true),
+        (err) => setDatabaseStartupError(err instanceof Error ? err : new Error(String(err))),
+      );
     }
   }, []);
+
+  if (databaseStartupError) {
+    return (
+      <Screen className="items-center justify-center px-6">
+        <Text variant="subtitle" className="text-danger text-center">
+          Erreur d'initialisation de la base de données
+        </Text>
+        <Text variant="caption" className="mt-2 text-center">
+          {databaseStartupError.message}
+        </Text>
+        <AppButton
+          label="Réessayer"
+          className="mt-4"
+          onPress={() => window.location.reload()}
+        />
+      </Screen>
+    );
+  }
 
   if (!isDatabaseReady) {
     return (

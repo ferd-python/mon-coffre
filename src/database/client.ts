@@ -53,6 +53,26 @@ if (Platform.OS !== "web") {
   realDb = drizzle(openSqlite(), { schema });
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// OPFS access handles are exclusive per file: right after the isolation reload above, the
+// previous document's worker may not have released its handles yet, so the warm-up open
+// below can transiently fail with "Access Handles cannot be created if there is another
+// open Access Handle...". A short retry lets that previous worker finish tearing down.
+async function warmUpWithRetry(maxAttempts = 6, delayMs = 400) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await openDatabaseAsync(DATABASE_NAME, dbOptions);
+      return;
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      await delay(delayMs);
+    }
+  }
+}
+
 // expo-sqlite's synchronous web API deadlocks if the very first call happens in the same
 // task that creates its worker (github.com/expo/expo/issues/47694): the main thread
 // busy-waits for a SharedArrayBuffer lock the worker can't flip until the event loop
@@ -63,6 +83,6 @@ export const ready: Promise<void> =
     ? Promise.resolve()
     : needsIsolationReload
       ? new Promise(() => {}) // page is reloading itself; this module instance is discarded
-      : openDatabaseAsync(DATABASE_NAME, dbOptions).then(() => {
+      : warmUpWithRetry().then(() => {
           realDb = drizzle(openSqlite(), { schema });
         });
