@@ -1,0 +1,18 @@
+{
+  "short_name": "Mon Coffre",
+  "name": "Mon Coffre",
+  "icons": [
+    {
+      "src": "/mon-coffre/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/mon-coffre/",
+  "scope": "/mon-coffre/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2563eb",
+  "background_color": "#2563eb"
+}

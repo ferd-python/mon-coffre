@@ -1,5 +1,5 @@
-import * as SecureStore from "expo-secure-store";
 import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "./webStorage";
 
 export const PIN_LENGTH = 4;
 
